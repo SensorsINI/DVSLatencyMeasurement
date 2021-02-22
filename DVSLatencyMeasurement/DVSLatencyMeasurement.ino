@@ -10,7 +10,7 @@
 // 2. Using Serial Monitor to test, set "No line ending", otherwise line ending will set LED off immediately
 
 const int LED1 = 2, LED2 = 3;
-const unsigned long FLASH_DELAY_US = 2000; // flash rate of LEDS
+const unsigned long FLASH_DELAY_US = 300; // flash rate of LEDS
 unsigned long lastToggleUs = 0;
 
 int led = 0; // 1, 2 to flash 1st or 2nd led
@@ -31,13 +31,16 @@ void loop() {
     led = ser - '0'; // convert the character '1'-'9' to decimal 1-9
     on = 1;
   }
-  if (led == 1) {
+   if (led == 1) {
     digitalWrite(LED1, on);
     digitalWrite(LED2, 0);
   } else if (led == 2) {
     digitalWrite(LED2, on);
     digitalWrite(LED1, 0);
-  } else {
+  } else if(ser=='p'){
+    // echo back, latency test 
+    Serial.print('p');
+  }else {
     digitalWrite(LED1, 0);
     digitalWrite(LED2, 0);
   }
