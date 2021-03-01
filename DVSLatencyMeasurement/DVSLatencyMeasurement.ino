@@ -10,7 +10,7 @@
 // 2. Using Serial Monitor to test, set "No line ending", otherwise line ending will set LED off immediately
 
 const int LED = 2;
-const unsigned long FLASH_DELAY_US = 10000; // flash time (maximum) of LED
+const unsigned long FLASH_LENGTH_US = 10000; // flash time (maximum) of LED
 const unsigned long FLASH_INTERVAL_US = 50000; // flash interval for master mode
 unsigned long timeLedSwitchedOnUs = 0;
 
@@ -38,7 +38,7 @@ void loop() {
     // turn on LEDs and wait for 'd' message that PC detected LED
     master = true;
     flash = false;
-    delayMicroseconds(random(FLASH_DELAY_US, FLASH_INTERVAL_US)); // delay before turning on LED
+    delay(random(50, 200)); // delay before turning on LED
     digitalWrite(LED, 1);
     timeLedSwitchedOnUs = micros();
   }  else if (ser == 'd') { // PC detected the LED via DVS
@@ -67,7 +67,7 @@ void loop() {
     flash = false;
   }
   unsigned long now = micros();
-  if (now - timeLedSwitchedOnUs > FLASH_DELAY_US) {
+  if (now - timeLedSwitchedOnUs > FLASH_LENGTH_US) {
     if (!flash)
       digitalWrite(LED, 0);
     else {
