@@ -1,55 +1,79 @@
 /**
-     DVS event camera latency test using 2 leds that alternate as quickly as they are detected to blink by algorithm.
+     DVS event camera latency test using LED detected to flash by PC algorithm.
 
     Author: Tobi Delbruck, Feb 2021
 */
 #define VERSION  "DVSLatencyMeasurement dated 21.2.2021"
-#define BAUDRATE 115200 // serial port baud rate, host must set same speed
+#define BAUDRATE 2000000 // 115200 // serial port baud rate, host must set same speed
 // NOTES
 // 1. when using Chinese Arduino Nano with CH340 USB serial, use Processor/AtMega328P (old bootloader)
 // 2. Using Serial Monitor to test, set "No line ending", otherwise line ending will set LED off immediately
 
-const int LED1 = 2, LED2 = 3;
-const unsigned long FLASH_DELAY_US = 5000; // flash time (maximum) of LED
-unsigned long lastToggleUs = 0;
+const int LED = 2;
+const unsigned long FLASH_DELAY_US = 10000; // flash time (maximum) of LED
+const unsigned long FLASH_INTERVAL_US = 50000; // flash interval for master mode
+unsigned long timeLedSwitchedOnUs = 0;
 
-int led = 0; // 1, 2 to flash 1st or 2nd led
 bool on = true;
+// master mode, we generate the LED flash, and wait for PC message that it saw it via DVS.
+// then we print the latency in us back to PC.
+bool master = false;
+boolean flash = false;
 
 void setup() {
   pinMode(LED_BUILTIN, OUTPUT);
-  pinMode(LED1, OUTPUT);
-  pinMode(LED2, OUTPUT);
+  pinMode(LED, OUTPUT);
   Serial.begin(BAUDRATE);
   Serial.println("DVSLatencyMeasurement ready to serve");
   Serial.println(VERSION);
+  randomSeed(analogRead(0));
+  digitalWrite(LED, 1);
+  delay(100);
+  digitalWrite(LED, 0); // flash once on boot
 }
 
 void loop() {
   int ser = Serial.read();
-  if (ser != -1)  {
-    led = ser - '0'; // convert the character '1'-'9' to decimal 1-9
-    on = 1;
-  }
-   if (led == 1) {
-    digitalWrite(LED1, on);
-    digitalWrite(LED2, 0);
-  } else if (led == 2) {
-    digitalWrite(LED2, on);
-    digitalWrite(LED1, 0);
-  } else if (led == 3) {
-    digitalWrite(LED2, on);
-    digitalWrite(LED1, on);
-  } else if(ser=='p'){
-    // echo back, latency test 
+  if (ser == 'm') { // m for master, pc told us to light up
+    // turn on LEDs and wait for 'd' message that PC detected LED
+    master = true;
+    flash = false;
+    delayMicroseconds(random(FLASH_DELAY_US, FLASH_INTERVAL_US)); // delay before turning on LED
+    digitalWrite(LED, 1);
+    timeLedSwitchedOnUs = micros();
+  }  else if (ser == 'd') { // PC detected the LED via DVS
+    digitalWrite(LED, 0);
+    long deltaTimeUs = micros() - timeLedSwitchedOnUs;
+    //    Serial.println(deltaTimeUs);
+    Serial.write((byte*)&deltaTimeUs, sizeof(long)); // sent in little endian binary
+  } else if (ser == '1') {
+    digitalWrite(LED, 1);
+    timeLedSwitchedOnUs = micros();
+    master = false;
+    flash = false;
+  } else if (ser == '0') { 
+    digitalWrite(LED, 0);
+    master = false;
+    flash = false;
+  }else if (ser == 'f') { // flash LED, for setting ROI on host
+    digitalWrite(LED, 1);
+    timeLedSwitchedOnUs = micros();
+    master = false;
+    flash = true;
+  } else if (ser == 'p') {
+    // echo back, latency test
     Serial.print('p');
-  }else {
-    digitalWrite(LED1, 0);
-    digitalWrite(LED2, 0);
+    master = false;
+    flash = false;
   }
   unsigned long now = micros();
-  if (now - lastToggleUs > FLASH_DELAY_US) {
-    on = 0;
-    lastToggleUs = now;
+  if (now - timeLedSwitchedOnUs > FLASH_DELAY_US) {
+    if (!flash)
+      digitalWrite(LED, 0);
+    else {
+      on = !on;
+      timeLedSwitchedOnUs = now;
+      digitalWrite(LED, on);
+    }
   }
 }
