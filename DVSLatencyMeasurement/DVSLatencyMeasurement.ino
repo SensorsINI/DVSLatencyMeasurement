@@ -4,7 +4,7 @@
     Author: Tobi Delbruck, Feb 2021
 */
 #define VERSION  "DVSLatencyMeasurement dated 21.2.2021"
-#define BAUDRATE 2000000 // 9600 // 2000000 // 115200 // serial port baud rate, host must set same speed
+#define BAUDRATE 115200 // 9600 // 2000000 // 115200 // serial port baud rate, host must set same speed
 // NOTES
 // 1. when using Chinese Arduino Nano with CH340 USB serial, use Processor/AtMega328P (old bootloader)
 // 2. Using Serial Monitor to test, set correct baud rate, "No line ending", otherwise line ending will set LED off immediately
@@ -66,11 +66,13 @@ void loop() {
         state = STATE_MASTER_DELAYING;
         //    Serial.println(deltaTimeUs);
         Serial.write((byte*)&deltaTimeUs, sizeof(long)); // sent in little endian binary
+        Serial.send_now();
       }
       break;
     case 'p': {
         // echo back, latency test
         Serial.print('p');
+        Serial.send_now();
         state = STATE_IDLE;
       }
       break;
